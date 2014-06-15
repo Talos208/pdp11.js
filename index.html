@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style type="text/css">
+.addr {
+	width: 3em;
+}
+.data span {
+	margin-right: 0.5em;
+}
+</style>
+<script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="js/pdp11.js"></script>
+<script type="text/javascript">
+$(function() {
+	$("body").on('change', '#aout', 
+		function(event) {
+			var file = $("#aout").get(0).files[0];
+			var reader = new FileReader();
+			var cont = {};
+			reader.readAsArrayBuffer(file);
+			reader.onloadend = 
+				function(b) {
+					var tgt = $("div#dump").empty().append("<table></table>");
+					cont.pc = 0;
+					cont.mem = new Uint8Array(this.result.slice(16));	// a.outのヘッダ分スキップ
+
+					while (cont.pc < cont.mem.length) {
+						// 1命令をデコード
+						ope = decode_ope(cont);	
+
+						// デコードした命令を表示
+						var $inner = $("<tr id='addr" + ope.addr + "'></tr>");
+						$inner.append("<td class='addr'>" + uint16hex(ope.addr) + "<td>");
+						var $data = $("<td class='data'></td>");
+						for (i = 0;i < ope.val.length;i++) {
+							$data.append("<span>" + uint16hex(ope.val[i]) + "</span>");
+						}
+						$inner.append($data);
+						$inner.append("<td class='.mnimonic'>" +ope.nim + "</td>");
+
+						tgt.append($inner);
+					}
+				}
+		}
+	);
+});
+</script>
+</head>
+<body>
+<input id="aout" type="file">
+<div id="dump">
+</div>
+</body>
+</html>
