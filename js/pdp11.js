@@ -1,3 +1,44 @@
+var Opcode = {};
+(function () {
+	var opcode_base = [
+		"MOV", "MOVB","CMP", "CMPB","BIT", "BITB","BIC", "BICB","BIS", "BISB",
+		"SUB", "ADD", "CLR", "COM", "INC", "DEC", "NEG", "ADC", "SBC", "TST", 
+		"ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","JSR", "EMT", "TRAP",
+		"HALT","WAIT","RTI", "BPT", "IOT","RESET","RTT", "BR",  "BNE", "BEQ", 
+		"BGE", "BLT", "BGT", "BLE", "BPL", "BMI", "BHI", "BLOS","BVC", "BVS", 
+		"BCC", "BCS", "MUL", "DIV", "ASH", "ASHC","XOR", "SOB", "NOP"
+	];
+	for (var i = 0; i < opcode_base.length;i++) {
+		Object.defineProperty(Opcode, opcode_base[i],{value: i, enumerable: true, configurable: false, writeble: false});
+	}
+	Object.defineProperty(Opcode, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
+})();
+
+var Oprand = {};
+(function(){
+	Object.defineProperties(Oprand,{
+		"R0":{value:    0,writable: false},
+		"R1":{value: 0x10,writable: false},
+		"R2":{value: 0x20,writable: false},
+		"R3":{value: 0x30,writable: false},
+		"R4":{value: 0x40,writable: false},
+		"R5":{value: 0x50,writable: false},
+		"SP":{value: 0x60,writable: false},
+		"PC":{value: 0x70,writable: false}
+	});
+	Object.defineProperties(Oprand, {
+		"Imm":   {value:  0,writable: false},
+		"Ind":   {value:  1,writable: false},
+		"Inc":   {value:  2,writable: false},
+		"IndInc":{value:  3,writable: false},
+		"Dec":   {value:  4,writable: false},
+		"IndDec":{value:  5,writable: false},
+		"Off":   {value:  6,writable: false},
+		"IndOff":{value:  7,writable: false},
+		"Dec":   {value:  8,writable: false}
+	});
+})();
+
 var fetch = function(cont,ope) {
 	var result = cont.mem[cont.pc++] | cont.mem[cont.pc++] << 8;
 	ope.val.push(result);
@@ -51,7 +92,7 @@ var operand = function(v,cont,ope) {
 				return "@(SP)+";
 				break;
 			case 0x20:
-				return "-(SP)+";
+				return "-(SP)";
 				break;
 			case 0x30:
 				var v = fetch(cont,ope);
@@ -96,6 +137,8 @@ var operand = function(v,cont,ope) {
 
 	return null;
 }
+
+
 
 // 命令デコード
 var decode_ope = function (cont) {
@@ -201,7 +244,7 @@ var decode_ope = function (cont) {
 						// 1*24 	BVS		branch oVerflow Set
 						// 1*30 	BCC		branch Carry Clear
 						// 1*34 	BCS		branch Carry Set
-						var nims = ["HALT","BR","BNE","BEQ","BGE","BLT","BGT","BLE"];
+						var nims = ["BPL","BMI","BHI","BLOS","BVC","BVS","BCC","BCS"];
 						nim = nims[opc >> 6 & 0x3f];
 					}
 				}
