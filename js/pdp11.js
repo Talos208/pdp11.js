@@ -35,8 +35,12 @@ var Oprand = {};
 		"IndDec":{value:  5,writable: false},
 		"Off":   {value:  6,writable: false},
 		"IndOff":{value:  7,writable: false},
-		"Dec":   {value:  8,writable: false}
+		"Dec":   {value:  8,writable: false},
+		"Abs":   {value:  9,writable: false},
+		"Rel":   {value: 10,writable: false},
+		"RelDef":{value: 11,writable: false}
 	});
+	Object.defineProperty(Oprand, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
 })();
 
 var fetch = function(cont,ope) {
@@ -58,7 +62,155 @@ var uint8hex = function(v) {
 }
 
 // オペランドのデコード
-var operand = function(v,cont,ope) {
+var decodeOpr = function(v,cont,ope) {
+	var reg = v & 7;
+	var addr = (v >> 3) & 0x7;
+
+	var result = 0;
+	var resarry = [0];
+
+	if (reg == 7) {
+		result = Oprand.PC;
+		switch (addr) {
+			case 2:
+				result |= Oprand.Imm;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+			case 3:
+				result |= Oprand.Abs;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+			case 6:
+				result |= Oprand.Rel;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+			case 7:
+				result |= Oprand.RelDef;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+		}
+	} else if (reg == 6) {
+		result = Oprand.SP;
+		switch (addr) {
+			case 1:
+				result |= Oprand.Def;
+				break;
+			case 2:
+				result |= Oprand.Inc;
+				break;
+			case 3:
+				result |= Oprand.IncDef;
+				break;
+			case 4:
+				result |= Oprand.Dec;
+				break;
+			case 6:
+				result |= Oprand.Def;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+			case 7:
+				result |= Oprand.Def;
+				var v = fetch(cont,ope);
+				resarry.push(v);
+				break;
+		}
+	} else {
+		// その他レジスタ
+		result = Oprand.R0 + reg << 4;
+		switch ((v >> 3) & 7) {
+			case 0:
+				result |= Oprand.Imm;
+				break;
+			case 1:
+				result |= Oprand.Ind;
+				break;
+			case 2:
+				result |= Oprand.Inc;
+				break;
+			case 3:
+				result |= Oprand.IndInc;
+				break;
+			case 4:
+				result |= Oprand.Dec;
+				break;
+			case 5:
+				result |= Oprand.IndDec;
+				break;
+			case 6:
+				resarry[1]= fetch(cont,ope);
+				result |= Oprand.Off;
+				break;
+			case 7:
+				resarry[1]= fetch(cont,ope);
+				result |= Oprand.IndOff;
+				break;
+		}
+	}
+
+	resarry[0] = v;
+	return resarry;
+}
+
+var oprToS = function(ope) {
+	console.log(ope);
+	var v = ope[0];
+	var reg = v & 0xf;
+	if (reg == 7) {
+		switch (v >> 4)  {
+			case Oprand.Imm:
+				return "#" + uint16hex(ope[1]);
+				break;
+			case Oprand.Abs:
+				return "#@" + uint16hex(ope[1]);
+				break;
+			case Oprand.Rel:
+				return uint16hex(ope[1]);
+				break;
+			case Oprand.RelDef:
+				return '@' + uint16hex(ope[1]);
+				break;
+		}
+	} else {
+		var reg = "R" + reg;
+		if (reg == 6) {
+			reg = "SP";
+		}
+		switch (v >> 4)  {
+			case Oprand.Imm:
+				return reg;
+				break;
+			case Oprand.Ind:
+				return '(' + reg + ')';
+				break;
+			case Oprand.Inc:
+				return '(' + reg + ')+';
+				break;
+			case Oprand.IndInc:
+				return '@(' + reg + ')+';
+				break;
+			case Oprand.Dec:
+				return '-(' + reg + ')';
+				break;
+			case Oprand.IndDec:
+				return '@-(' + reg + ')';
+				break;
+			case Oprand.Off:
+				return uint16hex(ope[1]) + '(' + reg + ')'
+				break;
+			case Oprand.IndOff:
+				return '@' + uint16hex(ope[1]) + '(' + reg + ')'
+				break;
+		}
+	}
+}
+
+// オペランドのデコード
+var Oprand0 = function(v,cont,ope) {
 	var reg = v & 7;
 	if (reg == 7) {
 		switch ((v >> 3) & 0x7) {
@@ -159,20 +311,20 @@ var decode_ope = function (cont) {
 		if (byteFlg) {
 			nim += "B";
 		}
-		var src = operand(opc >> 6 & 0x3f, cont, ope);
-		var dst = operand(opc      & 0x3f, cont, ope);
+		var src = decodeOpr(opc >> 6 & 0x3f, cont, ope);
+		var dst = decodeOpr(opc      & 0x3f, cont, ope);
 
-		nim += " " + src + "," + dst;
+		nim += " " + oprToS(src) + "," + oprToS(dst);
 	} else if (opc1 == 6) {
 		if (byteFlg) {
 			nim = "SUB";
 		} else {
 			nim = "ADD";
 		}
-		var src = operand(opc >> 6 & 0x3f, cont, ope);
-		var dst = operand(opc      & 0x3f, cont, ope);
+		var src = decodeOpr(opc >> 6 & 0x3f, cont, ope);
+		var dst = decodeOpr(opc      & 0x3f, cont, ope);
 
-		nim += " " + src + "," + dst;
+		nim += " " + oprToS(src) + "," + oprToS(dst);
 	} else if (opc1 == 0) {
 		var opc2 = (opc >> 9) & 7;
 		var opc3 = (opc >> 6) & 7;
@@ -181,16 +333,16 @@ var decode_ope = function (cont) {
 				// 算術演算
 				var nims = ["CLR" ,"COM" ,"INC" ,"DEC" ,"NEG" ,"ADC" ,"SBC", "TST"];
 				nim = nims[opc3];
-				var dst = operand(opc      & 0x3f, cont, ope);
-				nim += " " + src + "," + dst;
+				var dst = decodeOpr(opc      & 0x3f, cont, ope);
+				nim += " " + oprToS(dst);
 				break;
 
 			case 6:
 				// ビット演算
 				var nims = ["ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","???"];
 				nim = nims[opc3];
-				var dst = operand(opc      & 0x3f, cont, ope);
-				nim += " " + src + "," + dst;
+				var dst = decodeOpr(opc      & 0x3f, cont, ope);
+				nim += " " + oprToS(dst);
 				break;
 
 			case 4:
@@ -198,9 +350,9 @@ var decode_ope = function (cont) {
 				if (!byteFlg) {
 					nim = "JSR";
 					var reg = "R" + (opc >> 6) & 7;
-					var dst = operand(opc      & 0x3f, cont, ope);
+					var dst = decodeOpr(opc      & 0x3f, cont, ope);
 
-					nim += " " + reg + "," + dst;
+					nim += " " + reg + "," + oprToS(dst);
 				} else {
 					// TRAP/EMT
 					if (opc & 0x100) {
