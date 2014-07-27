@@ -1,22 +1,21 @@
 function Opcode() {
-	(function (self) {
-		var opcode_base = [
-			"MOV", "MOVB","CMP", "CMPB","BIT", "BITB","BIC", "BICB","BIS", "BISB",
-			"SUB", "ADD", "CLR", "COM", "INC", "DEC", "NEG", "ADC", "SBC", "TST", 
-			"ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","JSR", "EMT", "TRAP",
-			"HALT","WAIT","RTI", "BPT", "IOT","RESET","RTT", "BR",  "BNE", "BEQ", 
-			"BGE", "BLT", "BGT", "BLE", "BPL", "BMI", "BHI", "BLOS","BVC", "BVS", 
-			"BCC", "BCS", "MUL", "DIV", "ASH", "ASHC","XOR", "SOB", "NOP"
-		];
-		for (var i = 0; i < opcode_base.length;i++) {
-			Object.defineProperty(self, opcode_base[i],{value: i, enumerable: true, configurable: false, writeble: false});
-		}
-		Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
-	})(this);
-
 	this.addr = 0;
 	this.val = [];
 }
+(function (self) {
+	var opcode_base = [
+		"MOV", "MOVB","CMP", "CMPB","BIT", "BITB","BIC", "BICB","BIS", "BISB",
+		"SUB", "ADD", "CLR", "COM", "INC", "DEC", "NEG", "ADC", "SBC", "TST", 
+		"ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","JSR", "EMT", "TRAP",
+		"HALT","WAIT","RTI", "BPT", "IOT","RESET","RTT", "BR",  "BNE", "BEQ", 
+		"BGE", "BLT", "BGT", "BLE", "BPL", "BMI", "BHI", "BLOS","BVC", "BVS", 
+		"BCC", "BCS", "MUL", "DIV", "ASH", "ASHC","XOR", "SOB", "NOP"
+	];
+	for (var i = 0; i < opcode_base.length;i++) {
+		Object.defineProperty(self, opcode_base[i],{value: i, enumerable: true, configurable: false, writeble: false});
+	}
+	Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
+})(Opcode);
 
 function Continuation() {
 	this.mem = [];
@@ -54,138 +53,135 @@ var uint8hex = function(v) {
 }
 
 function Oprand() {
-	(function(self){
-		Object.defineProperties(self,{
-			"R0":{value:    0,writable: false},
-			"R1":{value: 0x10,writable: false},
-			"R2":{value: 0x20,writable: false},
-			"R3":{value: 0x30,writable: false},
-			"R4":{value: 0x40,writable: false},
-			"R5":{value: 0x50,writable: false},
-			"SP":{value: 0x60,writable: false},
-			"PC":{value: 0x70,writable: false}
-		});
-		Object.defineProperties(self, {
-			"Imm":   {value:  0,writable: false},
-			"Ind":   {value:  1,writable: false},
-			"Inc":   {value:  2,writable: false},
-			"IndInc":{value:  3,writable: false},
-			"Dec":   {value:  4,writable: false},
-			"IndDec":{value:  5,writable: false},
-			"Off":   {value:  6,writable: false},
-			"IndOff":{value:  7,writable: false},
-			"Dec":   {value:  8,writable: false},
-			"Abs":   {value:  9,writable: false},
-			"Rel":   {value: 10,writable: false},
-			"RelDef":{value: 11,writable: false}
-		});
-		Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
-	})(this);
-
 	this.value = [];
+	this.code = 0;
+	this.append = null;
 }
+(function(self){
+	Object.defineProperties(self,{
+		"R0":{value:    0,writable: false},
+		"R1":{value: 0x10,writable: false},
+		"R2":{value: 0x20,writable: false},
+		"R3":{value: 0x30,writable: false},
+		"R4":{value: 0x40,writable: false},
+		"R5":{value: 0x50,writable: false},
+		"SP":{value: 0x60,writable: false},
+		"PC":{value: 0x70,writable: false}
+	});
+	Object.defineProperties(self, {
+		"Imm":   {value:  0,writable: false},
+		"Ind":   {value:  1,writable: false},
+		"Inc":   {value:  2,writable: false},
+		"IndInc":{value:  3,writable: false},
+		"Dec":   {value:  4,writable: false},
+		"IndDec":{value:  5,writable: false},
+		"Off":   {value:  6,writable: false},
+		"IndOff":{value:  7,writable: false},
+		"Dec":   {value:  8,writable: false},
+		"Abs":   {value:  9,writable: false},
+		"Rel":   {value: 10,writable: false},
+		"RelDef":{value: 11,writable: false}
+	});
+	Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
+})(Oprand);
 
 // オペランドのデコード
 Oprand.decode = function(v, cont, ope) {
 	var reg = v & 7;
 	var addr = (v >> 3) & 0x7;
 
-	var result = 0;
-	var resarry = [0];
+	var result = new Oprand();
 
 	if (reg == 7) {
-		result = Oprand.PC;
+		result.code = Oprand.PC;
 		switch (addr) {
 			case 2:
-				result |= Oprand.Imm;
-				var v = cont.fetch(ope);
-				resarry.push(v);
+				result.code |= Oprand.Imm;
+				result.append = cont.fetch(ope);
 				break;
 			case 3:
-				result |= Oprand.Abs;
-				var v = cont.fetch(ope);
-				resarry.push(v);
+				result.code |= Oprand.Abs;
+				result.append = cont.fetch(ope);
 				break;
 			case 6:
-				result |= Oprand.Rel;
-				var v = cont.fetch(ope);
-				resarry.push(v);
+				result.code |= Oprand.Rel;
+				result.append = cont.fetch(ope);
 				break;
 			case 7:
-				result |= Oprand.RelDef;
-				var v = cont.fetch(ope);
-				resarry.push(v);
+				result.code |= Oprand.RelDef;
+				result.append = cont.fetch(ope);
 				break;
 			default:
-				result = Oprand.UNDEF;
+				result.code = Oprand.UNDEF;
 		}
 	} else {
 		if (reg == 6) {
 			// スタックポインタ
-			result = Oprand.SP;
+			result.code = Oprand.SP;
 		} else {
 			// その他レジスタ
-			result = Oprand.R0 + reg << 4;
+			result.code = Oprand.R0 + reg << 4;
 		}
-		switch ((v >> 3) & 7) {
+		switch (addr) {
 			case 0:
-				result |= Oprand.Imm;
+				result.code |= Oprand.Imm;
 				break;
 			case 1:
-				result |= Oprand.Ind;
+				result.code |= Oprand.Ind;
 				break;
 			case 2:
-				result |= Oprand.Inc;
+				result.code |= Oprand.Inc;
 				break;
 			case 3:
-				result |= Oprand.IndInc;
+				result.code |= Oprand.IndInc;
 				break;
 			case 4:
-				result |= Oprand.Dec;
+				result.code |= Oprand.Dec;
 				break;
 			case 5:
-				result |= Oprand.IndDec;
+				result.code |= Oprand.IndDec;
 				break;
 			case 6:
-				resarry[1]= cont.fetch(ope);
-				result |= Oprand.Off;
+				result.code |= Oprand.Off;
+				result.append = cont.fetch(ope);
 				break;
 			case 7:
-				resarry[1]= cont.fetch(ope);
-				result |= Oprand.IndOff;
+				result.code |= Oprand.IndOff;
+				result.append = cont.fetch(ope);
 				break;
 		}
 	}
 
-	resarry[0] = result;
-	return resarry;
+	return result;
 }
 
-var oprToS = function(ope) {
+Oprand.prototype.toString = function() {
 	// console.log(ope);
-	var v = ope[0];
-	var reg = v & 0xf;
-	if (reg == 7) {
-		switch (v >> 4)  {
+	var v = this.code;
+	var reg = v & 0xf0;
+	var ope = v & 0xf;
+	if (reg == Oprand.PC) {
+		switch (ope)  {
 			case Oprand.Imm:
-				return "#" + uint16hex(ope[1]);
+				return "#" + uint16hex(this.append);
 				break;
 			case Oprand.Abs:
-				return "#@" + uint16hex(ope[1]);
+				return "#@" + uint16hex(this.append);
 				break;
 			case Oprand.Rel:
-				return uint16hex(ope[1]);
+				return uint16hex(this.append);
 				break;
 			case Oprand.RelDef:
-				return '@' + uint16hex(ope[1]);
+				return '@' + uint16hex(this.append);
 				break;
 		}
 	} else {
-		var reg = "R" + reg;
-		if (reg == 6) {
+		if (reg == Oprand.SP) {
 			reg = "SP";
+		} else {
+			reg = "R" + (reg >> 4);
 		}
-		switch (v >> 4)  {
+		switch (ope)  {
 			case Oprand.Imm:
 				return reg;
 				break;
@@ -205,96 +201,14 @@ var oprToS = function(ope) {
 				return '@-(' + reg + ')';
 				break;
 			case Oprand.Off:
-				return uint16hex(ope[1]) + '(' + reg + ')'
+				return uint16hex(this.append) + '(' + reg + ')'
 				break;
 			case Oprand.IndOff:
-				return '@' + uint16hex(ope[1]) + '(' + reg + ')'
+				return '@' + uint16hex(this.append) + '(' + reg + ')'
 				break;
 		}
 	}
 }
-
-// オペランドのデコード
-var Oprand0 = function(v,cont,ope) {
-	var reg = v & 7;
-	if (reg == 7) {
-		switch ((v >> 3) & 0x7) {
-			case 0x2:
-				var v = fetch(cont,ope);
-				return "#" + uint16hex(v);
-				break;
-			case 0x3:
-				var v = fetch(cont,ope);
-				return "@#" + uint16hex(v);
-				break;
-			case 0x6:
-				var v = fetch(cont,ope);
-				return uint16hex(v);
-				break;
-			case 0x7:
-				var v = fetch(cont,ope);
-				return "@" + uint16hex(v);
-				break;
-		}
-	} else if (reg == 6) {
-		// SP
-		switch (v & 0x38) {
-			case 8:
-				return "(SP)";
-				break;
-			case 0x10:
-				return "(SP)+";
-				break;
-			case 0x18:
-				return "@(SP)+";
-				break;
-			case 0x20:
-				return "-(SP)";
-				break;
-			case 0x30:
-				var v = fetch(cont,ope);
-				return uint16hex(v) + "(SP)";
-				break;
-			case 0x38:
-				var v = fetch(cont,ope);
-				return "@" + uint16hex(v) + "(SP)";
-				break;
-		}
-	} else {
-		// その他レジスタ
-		switch (v & 0x38) {
-			case 0:
-				return "R" + reg;
-				break;
-			case 8:
-				return "(R" + reg + ")";
-				break;
-			case 0x10:
-				return "(R" + reg + ")+";
-				break;
-			case 0x18:
-				return "@(R" + reg + ")+";
-				break;
-			case 0x20:
-				return "-(R" + reg + ")";
-				break;
-			case 0x28:
-				return "@-(R" + reg + ")";
-				break;
-			case 0x30:
-				var v = fetch(cont,ope);
-				return uint16hex(v) + "(R" + reg + ")";
-				break;
-			case 0x38:
-				var v = fetch(cont,ope);
-				return "@" + uint16hex(v) + "(R" + reg + ")";
-				break;
-		}
-	}
-
-	return null;
-}
-
 
 
 // 命令デコード
