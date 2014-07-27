@@ -1,50 +1,42 @@
-var Opcode = {};
-(function () {
-	var opcode_base = [
-		"MOV", "MOVB","CMP", "CMPB","BIT", "BITB","BIC", "BICB","BIS", "BISB",
-		"SUB", "ADD", "CLR", "COM", "INC", "DEC", "NEG", "ADC", "SBC", "TST", 
-		"ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","JSR", "EMT", "TRAP",
-		"HALT","WAIT","RTI", "BPT", "IOT","RESET","RTT", "BR",  "BNE", "BEQ", 
-		"BGE", "BLT", "BGT", "BLE", "BPL", "BMI", "BHI", "BLOS","BVC", "BVS", 
-		"BCC", "BCS", "MUL", "DIV", "ASH", "ASHC","XOR", "SOB", "NOP"
-	];
-	for (var i = 0; i < opcode_base.length;i++) {
-		Object.defineProperty(Opcode, opcode_base[i],{value: i, enumerable: true, configurable: false, writeble: false});
+function Opcode() {
+	(function (self) {
+		var opcode_base = [
+			"MOV", "MOVB","CMP", "CMPB","BIT", "BITB","BIC", "BICB","BIS", "BISB",
+			"SUB", "ADD", "CLR", "COM", "INC", "DEC", "NEG", "ADC", "SBC", "TST", 
+			"ROR", "ROL", "ASR", "ASL", "MARK","MFPI","MTPI","JSR", "EMT", "TRAP",
+			"HALT","WAIT","RTI", "BPT", "IOT","RESET","RTT", "BR",  "BNE", "BEQ", 
+			"BGE", "BLT", "BGT", "BLE", "BPL", "BMI", "BHI", "BLOS","BVC", "BVS", 
+			"BCC", "BCS", "MUL", "DIV", "ASH", "ASHC","XOR", "SOB", "NOP"
+		];
+		for (var i = 0; i < opcode_base.length;i++) {
+			Object.defineProperty(self, opcode_base[i],{value: i, enumerable: true, configurable: false, writeble: false});
+		}
+		Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
+	})(this);
+
+	this.addr = 0;
+	this.val = [];
+}
+
+function Continuation() {
+	this.mem = [];
+	this.pc = 0;
+}
+
+Continuation.prototype.load = function(data) {
+	if ($.isArray(data)) {
+		this.mem = new Uint8Array(data.length);
+		this.mem.set(data);
+	} else if (data instanceof Uint8Array) {
+		this.mem = data;
 	}
-	Object.defineProperty(Opcode, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
-})();
+	this.pc = 0;
+}
 
-var Oprand = {};
-(function(){
-	Object.defineProperties(Oprand,{
-		"R0":{value:    0,writable: false},
-		"R1":{value: 0x10,writable: false},
-		"R2":{value: 0x20,writable: false},
-		"R3":{value: 0x30,writable: false},
-		"R4":{value: 0x40,writable: false},
-		"R5":{value: 0x50,writable: false},
-		"SP":{value: 0x60,writable: false},
-		"PC":{value: 0x70,writable: false}
-	});
-	Object.defineProperties(Oprand, {
-		"Imm":   {value:  0,writable: false},
-		"Ind":   {value:  1,writable: false},
-		"Inc":   {value:  2,writable: false},
-		"IndInc":{value:  3,writable: false},
-		"Dec":   {value:  4,writable: false},
-		"IndDec":{value:  5,writable: false},
-		"Off":   {value:  6,writable: false},
-		"IndOff":{value:  7,writable: false},
-		"Dec":   {value:  8,writable: false},
-		"Abs":   {value:  9,writable: false},
-		"Rel":   {value: 10,writable: false},
-		"RelDef":{value: 11,writable: false}
-	});
-	Object.defineProperty(Oprand, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
-})();
-
-var fetch = function(cont,ope) {
-	var result = cont.mem[cont.pc++] | cont.mem[cont.pc++] << 8;
+Continuation.prototype.fetch = function(ope) {
+	ope = ope ? ope : new Opcode();
+	ope.addr = this.pc
+	var result = this.mem[this.pc++] | this.mem[this.pc++] << 8;
 	ope.val.push(result);
 	return result;
 }
@@ -61,8 +53,40 @@ var uint8hex = function(v) {
 	return result.slice(-2);
 }
 
+function Oprand() {
+	(function(self){
+		Object.defineProperties(self,{
+			"R0":{value:    0,writable: false},
+			"R1":{value: 0x10,writable: false},
+			"R2":{value: 0x20,writable: false},
+			"R3":{value: 0x30,writable: false},
+			"R4":{value: 0x40,writable: false},
+			"R5":{value: 0x50,writable: false},
+			"SP":{value: 0x60,writable: false},
+			"PC":{value: 0x70,writable: false}
+		});
+		Object.defineProperties(self, {
+			"Imm":   {value:  0,writable: false},
+			"Ind":   {value:  1,writable: false},
+			"Inc":   {value:  2,writable: false},
+			"IndInc":{value:  3,writable: false},
+			"Dec":   {value:  4,writable: false},
+			"IndDec":{value:  5,writable: false},
+			"Off":   {value:  6,writable: false},
+			"IndOff":{value:  7,writable: false},
+			"Dec":   {value:  8,writable: false},
+			"Abs":   {value:  9,writable: false},
+			"Rel":   {value: 10,writable: false},
+			"RelDef":{value: 11,writable: false}
+		});
+		Object.defineProperty(self, "UNDEF",{value: 255, enumerable: true, configurable: false, writeble: false});
+	})(this);
+
+	this.value = [];
+}
+
 // オペランドのデコード
-var decodeOpr = function(v,cont,ope) {
+Oprand.decode = function(v, cont, ope) {
 	var reg = v & 7;
 	var addr = (v >> 3) & 0x7;
 
@@ -74,54 +98,35 @@ var decodeOpr = function(v,cont,ope) {
 		switch (addr) {
 			case 2:
 				result |= Oprand.Imm;
-				var v = fetch(cont,ope);
+				var v = cont.fetch(ope);
 				resarry.push(v);
 				break;
 			case 3:
 				result |= Oprand.Abs;
-				var v = fetch(cont,ope);
+				var v = cont.fetch(ope);
 				resarry.push(v);
 				break;
 			case 6:
 				result |= Oprand.Rel;
-				var v = fetch(cont,ope);
+				var v = cont.fetch(ope);
 				resarry.push(v);
 				break;
 			case 7:
 				result |= Oprand.RelDef;
-				var v = fetch(cont,ope);
+				var v = cont.fetch(ope);
 				resarry.push(v);
 				break;
-		}
-	} else if (reg == 6) {
-		result = Oprand.SP;
-		switch (addr) {
-			case 1:
-				result |= Oprand.Def;
-				break;
-			case 2:
-				result |= Oprand.Inc;
-				break;
-			case 3:
-				result |= Oprand.IncDef;
-				break;
-			case 4:
-				result |= Oprand.Dec;
-				break;
-			case 6:
-				result |= Oprand.Def;
-				var v = fetch(cont,ope);
-				resarry.push(v);
-				break;
-			case 7:
-				result |= Oprand.Def;
-				var v = fetch(cont,ope);
-				resarry.push(v);
-				break;
+			default:
+				result = Oprand.UNDEF;
 		}
 	} else {
-		// その他レジスタ
-		result = Oprand.R0 + reg << 4;
+		if (reg == 6) {
+			// スタックポインタ
+			result = Oprand.SP;
+		} else {
+			// その他レジスタ
+			result = Oprand.R0 + reg << 4;
+		}
 		switch ((v >> 3) & 7) {
 			case 0:
 				result |= Oprand.Imm;
@@ -142,22 +147,22 @@ var decodeOpr = function(v,cont,ope) {
 				result |= Oprand.IndDec;
 				break;
 			case 6:
-				resarry[1]= fetch(cont,ope);
+				resarry[1]= cont.fetch(ope);
 				result |= Oprand.Off;
 				break;
 			case 7:
-				resarry[1]= fetch(cont,ope);
+				resarry[1]= cont.fetch(ope);
 				result |= Oprand.IndOff;
 				break;
 		}
 	}
 
-	resarry[0] = v;
+	resarry[0] = result;
 	return resarry;
 }
 
 var oprToS = function(ope) {
-	console.log(ope);
+	// console.log(ope);
 	var v = ope[0];
 	var reg = v & 0xf;
 	if (reg == 7) {
