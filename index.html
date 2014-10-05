@@ -17,7 +17,7 @@ $(function() {
 		function(event) {
 			var file = $("#aout").get(0).files[0];
 			var reader = new FileReader();
-			var cont = {};
+			cont = new Continuation();
 			reader.readAsArrayBuffer(file);
 			reader.onloadend = 
 				function(b) {

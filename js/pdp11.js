@@ -59,8 +59,10 @@ function Continuation() {
 	}
 
 	self.prototype.fetch = function(ope) {
-		ope = ope ? ope : new Opcode();
-		ope.addr = this.pc
+		if (!ope) {
+			ope = new Opcode();
+			ope.addr = this.pc
+		}
 		var result = this.mem[this.pc++] | this.mem[this.pc++] << 8;
 		ope.val.push(result);
 		return result;

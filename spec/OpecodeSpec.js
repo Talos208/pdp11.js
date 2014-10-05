@@ -5,7 +5,6 @@ describe("Opcodeは", function() {
 	describe("デコード時に", function() {
 		beforeEach(function() {
 			cont = new Continuation();
-			// ope = cont.fetch();
 		});
 		$.each([
 			// 2オペランド
