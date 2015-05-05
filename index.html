@@ -18,38 +18,65 @@
 <script type="text/javascript" src="js/pdp11.js"></script>
 <script type="text/javascript">
 $(function() {
-	$("body").on('change', '#aout', 
+	var cont = new Continuation();
+	var setDecodeResult = function(tgt) {
+		while (cont.pc < cont.mem.length) {
+			// 1命令をデコード
+			ope = decode_ope(cont);
+
+			// デコードした命令を表示
+			var $inner = $("<tr id='addr" + ope.addr + "'></tr>");
+			$inner.append("<td class='addr'>" + uint16hex(ope.addr) + "<td>");
+			var data = "<td class='data'>";
+			for (i = 0;i < ope.val.length;i++) {
+				data += "<span>" + uint16hex(ope.val[i]) + "</span>";
+			}
+			data += "</td>";
+			$inner.append(data);
+
+			$inner.append("<td class='mnimonic code'>" + ope.nim + "</td>");
+			$inner.append("<td class='comment'></td>");
+
+			tgt.append($inner);
+		}
+		var $inner = $("<tr id='addr" + cont.pc + "'></tr>");
+						// <button class="btn btn-default btn-xs" disabled="disabled"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+		$inner.append("<td class='addr'>" + uint16hex(cont.pc) + "<td>");
+		$inner.append("<td class='data'></td><td class='mnimonic code'></td><td class='comment'></td>");
+		tgt.append($inner);
+	}
+	// メニュー
+	// ロード
+	$("body").on('click', 'a#menu-item-load-file',
+		function(event) {
+			$("input#aout").click();
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			return false;
+		}
+	);
+	$("body").on('change', '#aout',
 		function(event) {
 			var file = $("#aout").get(0).files[0];
 			var reader = new FileReader();
 			cont = new Continuation();
 			reader.readAsArrayBuffer(file);
-			reader.onloadend = 
+			reader.onloadend =
 				function(b) {
 					var tgt = $("div#dump tbody").empty();
 					cont.pc = 0;
 					cont.mem = new Uint8Array(this.result.slice(16));	// a.outのヘッダ分スキップ
 
-					while (cont.pc < cont.mem.length) {
-						// 1命令をデコード
-						ope = decode_ope(cont);	
-
-                        // デコードした命令を表示
-                        var $inner = $("<tr id='addr" + ope.addr + "'></tr>");
-                        $inner.append("<td class='addr'>" + uint16hex(ope.addr) + "<td>");
-                        var data = "<td class='data'>";
-                        for (i = 0;i < ope.val.length;i++) {
-                            data += "<span>" + uint16hex(ope.val[i]) + "</span>";
-                        }
-                        data += "</td>";
-                        $inner.append(data);
-
-                        $inner.append("<td class='mnimonic code'>" + ope.nim + "</td>");
-                        $inner.append("<td class='comment'></td>");
-
-                        tgt.append($inner);
-					}
+					setDecodeResult(tgt);
 				}
+		}
+	);
+	// 新規
+	$("body").on('click', 'a#menu-item-new',
+		function(event) {
+			cont = new Continuation();
+			setDecodeResult($("div#dump tbody").empty());
+			$("input#aout").val("");
 		}
 	);
 });
@@ -65,6 +92,9 @@ $(function() {
                 <li class="dropdown">
                   <a id="drop1" href="#" role="button" class="dropdown-toggle" data-toggle="dropdown">File<span class="caret"></span></a>
                   <ul class="dropdown-menu" role="menu" aria-labelledby="drop1">
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="menu-item-new"></a>New</li>
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="menu-item-load-file"></a>Load</li>
+                    <li role="presentation" class="divider"></li>
                     <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Exit</a></li>
                   </ul>
                 </li>
@@ -92,7 +122,9 @@ $(function() {
 			</div>
 		</div>
 	</div>
-	<input id="aout" type="file">
+	<div class="placeholder" style="display:none">
+		<input id="aout" type="file">
+	</div>
 	<div class="container">
 		<div id="dump" class="row">
 			<table class="table table-condensed table-hover">
