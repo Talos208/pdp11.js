@@ -1,15 +1,20 @@
 <!DOCTYPE HTML>
 <html>
 <head>
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/bootstrap-theme.min.css">
 <style type="text/css">
 .addr {
 	width: 3em;
+	font-family: monospace;
 }
 .data span {
 	margin-right: 0.5em;
+	font-family: monospace;
 }
 </style>
 <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="js/bootstrap.min.js"></script>
 <script type="text/javascript" src="js/pdp11.js"></script>
 <script type="text/javascript">
 $(function() {
@@ -21,7 +26,7 @@ $(function() {
 			reader.readAsArrayBuffer(file);
 			reader.onloadend = 
 				function(b) {
-					var tgt = $("div#dump").empty().append("<table></table>");
+					var tgt = $("div#dump tbody").empty();
 					cont.pc = 0;
 					cont.mem = new Uint8Array(this.result.slice(16));	// a.outのヘッダ分スキップ
 
@@ -29,17 +34,20 @@ $(function() {
 						// 1命令をデコード
 						ope = decode_ope(cont);	
 
-						// デコードした命令を表示
-						var $inner = $("<tr id='addr" + ope.addr + "'></tr>");
-						$inner.append("<td class='addr'>" + uint16hex(ope.addr) + "<td>");
-						var $data = $("<td class='data'></td>");
-						for (i = 0;i < ope.val.length;i++) {
-							$data.append("<span>" + uint16hex(ope.val[i]) + "</span>");
-						}
-						$inner.append($data);
-						$inner.append("<td class='.mnimonic'>" +ope.nim + "</td>");
+                        // デコードした命令を表示
+                        var $inner = $("<tr id='addr" + ope.addr + "'></tr>");
+                        $inner.append("<td class='addr'>" + uint16hex(ope.addr) + "<td>");
+                        var data = "<td class='data'>";
+                        for (i = 0;i < ope.val.length;i++) {
+                            data += "<span>" + uint16hex(ope.val[i]) + "</span>";
+                        }
+                        data += "</td>";
+                        $inner.append(data);
 
-						tgt.append($inner);
+                        $inner.append("<td class='mnimonic code'>" + ope.nim + "</td>");
+                        $inner.append("<td class='comment'></td>");
+
+                        tgt.append($inner);
 					}
 				}
 		}
@@ -48,8 +56,69 @@ $(function() {
 </script>
 </head>
 <body>
-<input id="aout" type="file">
-<div id="dump">
-</div>
+	<nav class="navbar navbar-static" role="navigation">
+		<div class="navbar-header">
+			<a class="navbar-brand" href="#">PDP-11.js</a>
+		</div>
+		<div class="collapse navbar-collapse" id = "menu1">
+			<ul class="nav navbar-nav" role="navigation">
+                <li class="dropdown">
+                  <a id="drop1" href="#" role="button" class="dropdown-toggle" data-toggle="dropdown">File<span class="caret"></span></a>
+                  <ul class="dropdown-menu" role="menu" aria-labelledby="drop1">
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#">Exit</a></li>
+                  </ul>
+                </li>
+            </ul>
+			<ul class="nav navbar-nav navbar-right" role="navigation">
+                <li class="dropdown">  <!-- pull-right"-->
+                  <a href="#" id="drop2" role="button" class="dropdown-toggle" data-toggle="dropdown">Help<b class="caret"></b></a>
+                  <ul class="dropdown-menu" role="menu" aria-labelledby="drop2">
+                    <li role="presentation"><a role="menuitem" tabindex="-1" href="#" data-toggle="modal" data-target="#dialog-about">About</a></li>
+                  </ul>
+                </li>
+            </ul>
+		</div>
+	</nav>
+	<div class="modal fade moda-dialog modal-sm" id="dialog-about" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title">PDP-11.js</h4>
+			</div>
+			<div class="modal-body">
+				This is an emulator for PDP-11 written by javascript.
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+			</div>
+		</div>
+	</div>
+	<input id="aout" type="file">
+	<div class="container">
+		<div id="dump" class="row">
+			<table class="table table-condensed table-hover">
+				<thead>
+					<tr>
+						<th class="col-md-1">Addr.</th>
+						<th class="col-md-2">Label</th>
+						<th class="col-md-2">Value</th>
+						<th class="col-md-3">Mnemonic</th>
+						<th>Comment</th>
+					<tr>
+				</thead>
+				<tbody>
+					<tr id="addr0">
+						<td class="addr">
+							<span>0000</span>
+						</td>
+						<td class='lbl'></td>
+						<td class='data'></td>
+						<td class='mnimonic code'></td>
+						<td class='comment'></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</div>
+		</div>
 </body>
 </html>
