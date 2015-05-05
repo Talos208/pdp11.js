@@ -35,6 +35,7 @@ function Opcode() {
 function Continuation() {
 	this.mem = [];
 	this.pc = 0;
+	this.operations = {}
 }
 
 (function(self) {
@@ -68,6 +69,16 @@ function Continuation() {
 		return result;
 	}
 
+	self.prototype.set = function(addr, value) {
+		if (addr >=	 0) {
+			if (addr >= this.mem.length) {
+				newMem = new Uint8Array(addr + 1);
+				newMem.set(this.mem);
+				this.mem = newMem;
+			}
+			this.mem[addr] = value;
+		}
+	}
 })(Continuation);
 
 // 16ビット数を16進4桁で表示

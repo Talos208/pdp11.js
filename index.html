@@ -45,6 +45,60 @@ $(function() {
 		$inner.append("<td class='data'></td><td class='mnimonic code'></td><td class='comment'></td>");
 		tgt.append($inner);
 	}
+	// dataカラム編集機能
+	// 編集開始
+	$("div#dump tbody").on("click", "td.data",
+		function(event) {
+			var $cell = $(event.target).closest('tr').find('td.data');
+
+			var value = $cell.val();
+
+			$cell.empty();
+
+			var $inner = $('<input value="' + value + '"></td>');
+
+			$cell.append($inner);
+			$inner.focus();
+		}
+	);
+	// 編集完了（変更あり）
+	$("div#dump tbody").on("change", "td.data input",
+		function(event){
+			var $input = $(event.target);
+			var $cell = $input.closest("td.data");
+			var $line = $input.closest("tr");
+
+			var values = $input.val().split(' ');
+			var addr = $line.attr('id').replace(/^addr/,'') - 0;
+
+			for (var i = values.length - 1; i >= 0; i--) {
+				cont.set(addr + i * 2    , Number('0x' + values[i].substr(2,2)));
+				cont.set(addr + i * 2 + 1, Number('0x' + values[i].substr(0,2)));
+			}
+			$line.nextAll("tr").remove();
+			$line.remove();
+
+			var tgt = $("div#dump tbody");
+
+			cont.pc = addr;
+			setDecodeResult(tgt);
+		}
+	);
+	// 編集中断
+	$("div#dump tbody").on("blur", "td.data input",
+		function(event){
+			var $input = $(event.target);
+			var $line = $input.closest("tr");
+			var addr = $line.attr('id').replace(/^addr/,'') - 0;
+
+			$line.nextAll("tr").remove();
+			$line.remove();
+
+			var tgt = $("div#dump tbody");
+			cont.pc = addr;
+			setDecodeResult(tgt);
+		}
+	);
 	// メニュー
 	// ロード
 	$("body").on('click', 'a#menu-item-load-file',
@@ -140,6 +194,7 @@ $(function() {
 				<tbody>
 					<tr id="addr0">
 						<td class="addr">
+							<button class="btn btn-default btn-xs" disabled="disabled"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
 							<span>0000</span>
 						</td>
 						<td class='lbl'></td>
